@@ -1,0 +1,34 @@
+# STEREO Reels
+
+> An agent skill that turns a long recording into short vertical clips. It transcribes
+> the source with timecodes, lets the agent propose hooks, cuts what the human picks,
+> then transcribes every finished clip again to prove the cut is not broken. Five small
+> scripts, ffmpeg, one HTTP call to a speech recogniser. No local model, no framework.
+
+The point of the project is the verification step: a clip is approved because the
+recogniser, given only that clip, heard the words it was cut for — not because
+someone watched it.
+
+## Start here
+
+- [SKILL.md](SKILL.md): the sequence an agent follows, including the two points where
+  it must stop and ask a human — choosing hooks, and approving clips.
+- [README.md](README.md): the problem, measured numbers from two real runs, and the
+  reasoning behind re-encoding instead of stream copy.
+- [AGENTS.md](AGENTS.md): rules that are not visible from the code.
+
+## Tools
+
+- [tools/transcribe.py](tools/transcribe.py): media → segments with timecodes and an
+  optional speaker timeline. Extracts audio locally first, so a 2 GB video uploads
+  as ~12 MB.
+- [tools/cut.py](tools/cut.py): exact cut from the original. `--quality draft` for
+  review, `final` for approved clips.
+- [tools/verify.py](tools/verify.py): re-transcribes a clip and reports four failure
+  modes — `silence_head`, `silence_tail`, `text_drift`, `empty`.
+- [tools/srt.py](tools/srt.py): subtitles with timecodes rebased to the clip.
+
+## Optional
+
+- [.env.example](.env.example): the only configuration. Token comes from
+  `/app` in @stereo_dictator_bot.
