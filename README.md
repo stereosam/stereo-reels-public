@@ -73,9 +73,47 @@ the clip and no context, heard the words it was supposed to contain.
 | `tools/cut.py` | exact cut from the original, re-encoded so it lands on the frame, not the keyframe |
 | `tools/verify.py` | re-transcribes a clip and reports four specific failure modes |
 | `tools/srt.py` | subtitles with timecodes rebased to the clip, split at word boundaries |
+| `tools/reframe.py` | landscape → vertical, following the action instead of cropping the centre |
+| `tools/mcp_server.py` | the same operations as MCP tools, so an agent calls them instead of shelling out |
 | `SKILL.md` | the sequence an agent follows, including where it must stop and ask |
 
 Each is a standalone script with `--help`. Nothing imports a framework.
+
+## As an MCP server
+
+```bash
+claude mcp add reels -- python /path/to/tools/mcp_server.py
+```
+
+Four typed tools — `transcribe`, `cut`, `verify`, `subtitles` — with schemas, so the
+agent is told what arguments exist and a bad call comes back as a message instead of a
+traceback. JSON-RPC over stdio, standard library only, no SDK.
+
+One detail worth stealing: the server hands `sys.stdout` to the protocol and points
+everything else at stderr. A single stray `print` — or an ffmpeg child that writes to
+stdout — lands in the middle of a JSON-RPC frame and kills the session. Found it the
+first time a real cut ran through the server.
+
+## Vertical from landscape, without a dependency
+
+```bash
+python tools/reframe.py --src talk.mp4 --out vertical.mp4          # follow the action
+python tools/reframe.py --src talk.mp4 --out vertical.mp4 --anchor center
+python tools/reframe.py --src talk.mp4 --plan-only                 # just the camera path
+```
+
+Face detection would be the obvious way, and it costs a heavy dependency this pipeline
+promised not to have. So the camera path comes from motion: ffmpeg emits small greyscale
+frames, the per-column difference between neighbours says where things move, a window of
+the target width slides to the busiest spot, and the centre is then pulled onto the
+centroid of activity inside that window — without that last step a narrow speaker ends up
+clipped at the edge of the crop.
+
+The path is smoothed and speed-capped, so it pans rather than twitches, and is rendered
+through `sendcmd` driving `crop` — one keyframe per second.
+
+Measured on a 40-second 1280×720 stage recording: **0.7s to analyse** (119 sampled
+frames), 6.5s to render a 1080×1920 draft.
 
 ## Why cutting re-encodes
 
@@ -114,17 +152,19 @@ python tools/srt.py    --transcript clips/01.json --out clips/01.srt
 
 ## Roadmap
 
-- **MCP server** wrapping the same tools, so any agent can drive the pipeline without
-  shelling out.
-- **Auto-reframing** for static wide shots: face tracking and a camera path to 9:16.
 - **Burned-in captions** as an option, with styling.
 - **Batch mode**: propose, cut and verify a whole shortlist in one pass.
+- **`reframe` as an MCP tool** — it is a script today, not yet exposed over the protocol.
+- **Face-aware reframing** as an opt-in extra, for footage where the subject is still and
+  something else in frame moves.
 
 ## Known limitations
 
 - **Hook selection is not automated.** By design — that is the part where taste lives.
   The skill hands the agent a transcript and stops.
-- **No auto-reframing.** A wide static shot has to be cropped by hand, or shot vertical.
+- **Reframing follows motion, not faces.** On a talking head, a screencast or an
+  interview that is the same thing. On a still speaker standing next to a moving
+  screen it is not: the crop will chase the screen. `--anchor` overrides it.
 - **Russian-first.** The recogniser is configured for Russian; other languages work
   but are not what this was tuned on.
 - **Final renders of 4K sources are slow.** 54 seconds and 46 MB for a 13-second

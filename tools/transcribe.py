@@ -49,7 +49,7 @@ def extract_audio(src: Path) -> Path:
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-i", str(src),
          "-vn", "-acodec", "aac", "-b:a", "64k", "-ac", "1", str(tmp)],
-        check=True,
+        check=True, stdout=subprocess.DEVNULL,
     )
     return tmp
 

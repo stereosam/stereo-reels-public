@@ -117,11 +117,29 @@ Captions are split at word boundaries to about 42 characters, which reads on a p
 The `.srt` drops straight into CapCut, Premiere or Resolve. Burn them in only if
 asked — a sidecar file leaves the editor free to restyle.
 
-## What this skill deliberately does not do
+### 8. Vertical, if the source is landscape
 
-**Auto-reframing.** Turning a static wide shot into a moving vertical crop needs
-face tracking and a camera path. It is a real feature, it is not this one. If the
-source is already vertical, nothing is needed.
+```bash
+python tools/reframe.py --src podcast.mp4 --out final/01_vertical.mp4 --quality final
+```
+
+Skip it when the source is already vertical. The crop follows motion, so on a talking
+head it tracks the speaker; on footage where the subject is still and something else
+moves, use `--anchor center|left|right` and crop statically. `--plan-only` prints the
+camera path without rendering, which is the cheap way to check it before committing.
+
+## Running as an MCP server
+
+`tools/mcp_server.py` exposes `transcribe`, `cut`, `verify` and `subtitles` as typed
+MCP tools, so you call them directly instead of shelling out and parsing stdout:
+
+```bash
+claude mcp add reels -- python /path/to/tools/mcp_server.py
+```
+
+Same rules apply — verify before handing anything over, draft before final.
+
+## What this skill deliberately does not do
 
 **Choosing hooks for you.** That is the part where taste lives.
 

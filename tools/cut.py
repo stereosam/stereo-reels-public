@@ -74,7 +74,7 @@ def cut(src: Path, start: float, end: float, out: Path, pad: float = 0.0,
         "-movflags", "+faststart",
         str(out),
     ]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
 
     return {
         "src": str(src),

@@ -18,5 +18,10 @@ Things that are not visible from the code.
   transcript.** Timecodes then start at zero, which is what every editor expects.
 - `tools/verify.py` imports `tools/transcribe.py`. Run them from `tools/`, or add
   that directory to `PYTHONPATH`.
+- **Reframing follows motion, not faces.** On a still subject next to a moving screen it
+  will chase the screen. Check with `--plan-only` first; fall back to `--anchor`.
+- **In `mcp_server.py`, stdout belongs to the protocol.** `sys.stdout` is pointed at
+  stderr on startup and the real handle is kept private. Any `print`, or a child process
+  writing to stdout, lands inside a JSON-RPC frame and kills the session.
 - No dependencies beyond the standard library and `ffmpeg`. Keep it that way — this
   runs on other people's machines.
