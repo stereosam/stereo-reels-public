@@ -87,9 +87,10 @@ Each is a standalone script with `--help`. Nothing imports a framework.
 claude mcp add reels -- python /path/to/tools/mcp_server.py
 ```
 
-Four typed tools — `transcribe`, `cut`, `verify`, `subtitles` — with schemas, so the
-agent is told what arguments exist and a bad call comes back as a message instead of a
-traceback. JSON-RPC over stdio, standard library only, no SDK.
+Seven typed tools — `transcribe`, `cut`, `verify`, `subtitles`, `reframe`, `burn`,
+`pauses` — with schemas, so the agent is told what arguments exist and a bad call comes
+back as a message instead of a traceback. JSON-RPC over stdio, standard library only,
+no SDK.
 
 One detail worth stealing: the server hands `sys.stdout` to the protocol and points
 everything else at stderr. A single stray `print` — or an ffmpeg child that writes to

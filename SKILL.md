@@ -174,8 +174,9 @@ dropped is indistinguishable from silence here.
 
 ## Running as an MCP server
 
-`tools/mcp_server.py` exposes `transcribe`, `cut`, `verify` and `subtitles` as typed
-MCP tools, so you call them directly instead of shelling out and parsing stdout:
+`tools/mcp_server.py` exposes the whole pipeline — `transcribe`, `cut`, `verify`,
+`subtitles`, `reframe`, `burn`, `pauses` — as typed MCP tools, so you call them
+directly instead of shelling out and parsing stdout:
 
 ```bash
 claude mcp add reels -- python /path/to/tools/mcp_server.py
