@@ -2,7 +2,7 @@
 
 An agent skill that turns a long recording into short vertical clips. It transcribes
 the source with timecodes, lets the agent propose hooks, cuts what the human picks —
-and then transcribes every finished clip again to prove the cut is not broken. Five
+and then transcribes every finished clip again to prove the cut is not broken. Seven
 small tools, `ffmpeg`, and one HTTP call to a speech recogniser. No local model.
 
 **Status:** working, used on real recordings.
@@ -74,6 +74,7 @@ the clip and no context, heard the words it was supposed to contain.
 | `tools/verify.py` | re-transcribes a clip and reports four specific failure modes |
 | `tools/srt.py` | subtitles with timecodes rebased to the clip, split at word boundaries |
 | `tools/burn.py` | captions rendered into the frame, filling word by word as they are spoken |
+| `tools/pauses.py` | which silences have a still picture behind them, and are therefore dead |
 | `tools/reframe.py` | landscape → vertical, following the action instead of cropping the centre |
 | `tools/mcp_server.py` | the same operations as MCP tools, so an agent calls them instead of shelling out |
 | `SKILL.md` | the sequence an agent follows, including where it must stop and ask |
@@ -146,6 +147,34 @@ captions have somewhere to sit — right for slides, where a 9:16 crop would sli
 diagram in half. `--mode fit` fills the margins with a blurred copy instead; it flatters
 footage that nearly fits and betrays a wide slide, where the blur takes over half the
 screen and the captions still have nothing to sit against.
+
+## Which silences are worth keeping
+
+```bash
+python tools/pauses.py --src clip.mp4 --timing clip.json
+```
+
+```
+        silence    len   nothing on screen during it
+    0.58-  1.69   1.11s  0.58-1.69 (1.1s)
+    2.49-  6.87   4.38s  2.67-4.67 (2.0s), 5.00-6.00 (1.0s)
+   13.67- 14.43   0.76s  13.67-14.43 (0.8s)
+```
+
+A speaker who stops talking while drawing on a whiteboard is worth watching; a
+speaker who stops in front of a motionless slide is not. The audio cannot tell them
+apart, so this crosses two things that are already paid for: where the words are, from
+the per-word timings, and what the picture is doing, from the same frame differencing
+that builds the camera path.
+
+Note the middle row. Four seconds of silence, but the slide changes twice inside it —
+so the pause is not one dead block, it is two dead stretches with a visual event
+between them. Judging the pause as a whole would have thrown away the most eventful
+second of the clip.
+
+It reports and stops there. Cutting a stretch out of the middle shifts every later
+word timing, which is the exact failure this pipeline exists to prevent — and the
+better fix is usually to move the clip bounds so the dead air is never included.
 
 ## Why cutting re-encodes
 

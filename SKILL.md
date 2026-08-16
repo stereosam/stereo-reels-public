@@ -5,7 +5,7 @@ description: Turn a long recording into short vertical clips. Transcribe with ti
 
 # Reels from a podcast
 
-You have six tools in `tools/`. They do the mechanical work — extracting, cutting,
+You have seven tools in `tools/`. They do the mechanical work — extracting, cutting,
 recognising, checking. **You do the judgement**: which twenty seconds of a
 two-hour recording are worth anyone's attention. No script can decide that, and
 this skill does not pretend otherwise.
@@ -143,10 +143,34 @@ second, which is exactly long enough to look broken.
 python tools/reframe.py --src podcast.mp4 --out final/01_vertical.mp4 --quality final
 ```
 
-Skip it when the source is already vertical. The crop follows motion, so on a talking
-head it tracks the speaker; on footage where the subject is still and something else
-moves, use `--anchor center|left|right` and crop statically. `--plan-only` prints the
-camera path without rendering, which is the cheap way to check it before committing.
+**Check the aspect ratio before running this at all** — on an already-vertical source
+it does nothing but re-encode.
+
+`--mode crop` (default) follows motion, so on a talking head it tracks the speaker.
+On footage where the subject is still and something else moves, use
+`--anchor center|left|right` and crop statically. `--plan-only` prints the camera path
+without rendering, which is the cheap way to check it before committing.
+
+For **slides and diagrams a crop is wrong** — it slices the picture in half. Use
+`--mode pad`: the whole frame at full width on a solid background, shifted up so the
+captions have somewhere to sit. `--mode fit` does the same with a blurred copy behind
+it; on a wide slide that blur takes over half the screen and looks like a video posted
+without looking at it.
+
+### 9. Check the pauses before calling it done
+
+```bash
+python tools/pauses.py --src final/01.mp4 --timing clips/01.json
+```
+
+Silence is not automatically dead air: a speaker who stops talking while the slide
+changes is worth watching. This lists every pause and says what the picture was doing
+during it, so dead stretches can be removed by **moving the clip bounds** and cutting
+again — not by cutting a hole in the middle, which would shift every later word timing
+and desync the captions.
+
+It reports and never edits. And read it rather than acting on it: a word the recogniser
+dropped is indistinguishable from silence here.
 
 ## Running as an MCP server
 

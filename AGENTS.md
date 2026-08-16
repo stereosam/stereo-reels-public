@@ -22,6 +22,10 @@ Things that are not visible from the code.
   measured timing. `burn.py` refuses rather than guesses.
 - `tools/verify.py` imports `tools/transcribe.py`. Run them from `tools/`, or add
   that directory to `PYTHONPATH`.
+- **Silence is not automatically dead air.** `pauses.py` reports which pauses have a
+  still picture behind them; a speaker who stops talking while the slide changes or a
+  hand draws is worth keeping. And a word the recogniser dropped looks exactly like
+  silence in that report — read it, do not act on it blindly.
 - **Reframing follows motion, not faces.** On a still subject next to a moving screen it
   will chase the screen. Check with `--plan-only` first; fall back to `--anchor`.
 - **In `mcp_server.py`, stdout belongs to the protocol.** `sys.stdout` is pointed at

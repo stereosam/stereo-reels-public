@@ -2,7 +2,7 @@
 
 > An agent skill that turns a long recording into short vertical clips. It transcribes
 > the source with timecodes, lets the agent propose hooks, cuts what the human picks,
-> then transcribes every finished clip again to prove the cut is not broken. Five small
+> then transcribes every finished clip again to prove the cut is not broken. Seven small
 > scripts, ffmpeg, one HTTP call to a speech recogniser. No local model, no framework.
 
 The point of the project is the verification step: a clip is approved because the
@@ -34,6 +34,8 @@ deleted rather than kept as a fallback.
 - [tools/burn.py](tools/burn.py): captions rendered into the frame, filling word by word
   as they are spoken. Needs real per-word timings (`transcribe.py --words`) and refuses
   to estimate them from letter count.
+- [tools/pauses.py](tools/pauses.py): crosses the word timings with on-screen motion to
+  say which silences are dead and which carry something. Reports only — it never edits.
 - [tools/reframe.py](tools/reframe.py): landscape -> vertical. The camera path is built
   from motion (per-column frame differences), not face detection, so it needs no
   dependency beyond ffmpeg. `--anchor` forces a static crop; `--mode pad` skips cropping
