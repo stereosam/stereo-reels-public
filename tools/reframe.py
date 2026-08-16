@@ -144,6 +144,56 @@ def build_path(profiles: list, win_frac: float, duration: float) -> list:
     return path
 
 
+def render_fit(src: Path, out: Path, quality: str, target=(1080, 1920)) -> None:
+    """Вписать кадр целиком, поля — размытая увеличенная копия его же.
+
+    Для слайдов, схем и всего, где важен весь кадр: кроп 9:16 разрезал бы
+    диаграмму пополам. Размытый фон вместо чёрных полос — потому что чёрное
+    в ленте читается как «видео залили не глядя».
+    """
+    tw, th = target
+    crf, preset = ("28", "veryfast") if quality == "draft" else ("18", "slow")
+    vf = (
+        f"[0:v]split=2[bg][fg];"
+        f"[bg]scale={tw}:{th}:force_original_aspect_ratio=increase,"
+        f"crop={tw}:{th},boxblur=luma_radius=48:luma_power=2,"
+        f"eq=brightness=-0.06[bgb];"
+        f"[fg]scale={tw}:-2:flags=lanczos[fgs];"
+        f"[bgb][fgs]overlay=(W-w)/2:(H-h)/2"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-filter_complex", vf,
+         "-c:v", "libx264", "-preset", preset, "-crf", crf,
+         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)],
+        check=True, stdout=subprocess.DEVNULL,
+    )
+
+
+def render_pad(src: Path, out: Path, quality: str, bg: str = "0x0E1116",
+               offset: float = 0.28, target=(1080, 1920)) -> None:
+    """Кадр на всю ширину, поля — сплошной цвет, всё вместе сдвинуто вверх.
+
+    Это не «чёрные полосы от лени», а компоновка: слайд занимает верхние две
+    трети, под ним остаётся чистое место, куда садятся субтитры. Размытая
+    подложка (`fit`) на широком слайде проигрывает — она съедает больше
+    половины экрана рябью, а титрам всё равно не к чему прижаться.
+
+    offset — доля высоты кадра до верхнего края картинки.
+    """
+    tw, th = target
+    crf, preset = ("28", "veryfast") if quality == "draft" else ("18", "slow")
+    y = int(round(th * offset))
+    vf = f"scale={tw}:-2:flags=lanczos,pad={tw}:{th}:0:{y}:color={bg}"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vf", vf,
+         "-c:v", "libx264", "-preset", preset, "-crf", crf,
+         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)],
+        check=True, stdout=subprocess.DEVNULL,
+    )
+
+
 def render(src: Path, out: Path, size: dict, path: list, crop_w: int,
            crop_h: int, quality: str) -> None:
     half = crop_w / 2
@@ -176,11 +226,26 @@ def render(src: Path, out: Path, size: dict, path: list, crop_w: int,
 
 
 def reframe(src: Path, out: Path, anchor: str = None, ratio: str = "9:16",
-            quality: str = "draft", plan_only: bool = False) -> dict:
+            quality: str = "draft", plan_only: bool = False,
+            mode: str = "crop", bg: str = "0x0E1116",
+            offset: float = 0.28) -> dict:
     if shutil.which("ffmpeg") is None:
         sys.exit("ffmpeg not found in PATH")
 
     size = probe(src)
+
+    if mode in ("fit", "pad"):
+        # ничего не анализируем и не режем: кадр входит целиком
+        info = {"src": str(src), "out": str(out), "source": size,
+                "method": ("fit whole frame, blurred fill" if mode == "fit"
+                           else "whole frame at full width, solid background")}
+        if not plan_only:
+            if mode == "fit":
+                render_fit(src, out, quality)
+            else:
+                render_pad(src, out, quality, bg, offset)
+            info["bytes"] = out.stat().st_size
+        return info
     rw, rh = (int(x) for x in ratio.split(":"))
     crop_h = size["h"]
     crop_w = int(round(crop_h * rw / rh))
@@ -223,6 +288,16 @@ def main() -> None:
     p.add_argument("--anchor", default=None,
                    help="left | center | right | 0..1 — static crop, no analysis")
     p.add_argument("--quality", choices=["draft", "final"], default="draft")
+    p.add_argument("--mode", choices=["crop", "fit", "pad"], default="crop",
+                   help="crop: follow the action and cut to 9:16. "
+                        "pad: whole frame at full width on a solid background, "
+                        "shifted up to leave room for captions — best for slides. "
+                        "fit: whole frame with a blurred copy behind it")
+    p.add_argument("--bg", default="0x0E1116",
+                   help="background colour for --mode pad")
+    p.add_argument("--offset", type=float, default=0.28,
+                   help="--mode pad: top of the picture, as a fraction of frame "
+                        "height. Lower values leave more room underneath")
     p.add_argument("--plan-only", action="store_true",
                    help="only compute the camera path, render nothing")
     args = p.parse_args()
@@ -231,7 +306,8 @@ def main() -> None:
         sys.exit("--out is required unless --plan-only")
 
     info = reframe(args.src, args.out or Path("unused.mp4"), args.anchor,
-                   args.ratio, args.quality, args.plan_only)
+                   args.ratio, args.quality, args.plan_only, args.mode,
+                   args.bg, args.offset)
     print(json.dumps(info, ensure_ascii=False, indent=2))
 
 

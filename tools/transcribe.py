@@ -55,10 +55,11 @@ def extract_audio(src: Path) -> Path:
 
 
 def post_file(api: str, token: str, audio: Path, diarize: bool,
-              max_speakers: int, timeout: int) -> dict:
+              max_speakers: int, timeout: int, words: bool = False) -> dict:
     boundary = "----stereoreels"
     fields = {"diarize": "true" if diarize else "false",
-              "max_speakers": str(max_speakers)}
+              "max_speakers": str(max_speakers),
+              "words": "true" if words else "false"}
 
     body = bytearray()
     for key, value in fields.items():
@@ -87,9 +88,15 @@ def post_file(api: str, token: str, audio: Path, diarize: bool,
 
 def transcribe(src: Path, token: str, api: str = DEFAULT_API,
                diarize: bool = False, max_speakers: int = 4,
-               timeout: int = 1800) -> dict:
+               timeout: int = 1800, words: bool = False) -> dict:
+    """`words=True` asks for per-word boundaries as well as per-segment ones.
+
+    Only karaoke subtitles need them, and they cost extra time on the server, so
+    the default is off. Without them a burner has to guess how long each word
+    lasts from its letter count — which drifts by half a second and looks it.
+    """
     audio = src if src.suffix.lower() in AUDIO_EXT else extract_audio(src)
-    data = post_file(api, token, audio, diarize, max_speakers, timeout)
+    data = post_file(api, token, audio, diarize, max_speakers, timeout, words)
     data["source"] = str(src)
     return data
 
@@ -103,6 +110,8 @@ def main() -> None:
     p.add_argument("--env", type=Path, default=Path(".env"))
     p.add_argument("--api", default=None)
     p.add_argument("--diarize", action="store_true")
+    p.add_argument("--words", action="store_true",
+                   help="also return per-word start/end — needed for karaoke subtitles")
     p.add_argument("--max-speakers", type=int, default=4)
     p.add_argument("--timeout", type=int, default=1800)
     args = p.parse_args()
@@ -114,13 +123,16 @@ def main() -> None:
                  "or set DICTATOR_TOKEN in .env")
     api = args.api or os.environ.get("DICTATOR_API") or env.get("DICTATOR_API") or DEFAULT_API
 
-    data = transcribe(args.src, token, api, args.diarize, args.max_speakers, args.timeout)
+    data = transcribe(args.src, token, api, args.diarize, args.max_speakers,
+                      args.timeout, args.words)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     segs = data.get("segments", [])
+    word_count = sum(len(s.get("words") or []) for s in segs)
+    extra = f" · {word_count} word timings" if word_count else ""
     print(f"{len(segs)} segments · {data.get('duration', 0):.0f}s audio · "
-          f"{data.get('elapsed', 0):.0f}s to transcribe · -> {args.out}")
+          f"{data.get('elapsed', 0):.0f}s to transcribe{extra} · -> {args.out}")
 
 
 if __name__ == "__main__":

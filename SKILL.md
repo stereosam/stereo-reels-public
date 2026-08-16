@@ -5,7 +5,7 @@ description: Turn a long recording into short vertical clips. Transcribe with ti
 
 # Reels from a podcast
 
-You have five tools in `tools/`. They do the mechanical work — extracting, cutting,
+You have six tools in `tools/`. They do the mechanical work — extracting, cutting,
 recognising, checking. **You do the judgement**: which twenty seconds of a
 two-hour recording are worth anyone's attention. No script can decide that, and
 this skill does not pretend otherwise.
@@ -106,7 +106,7 @@ Full resolution, from the original. Nothing is upscaled from the draft.
 ### 7. Subtitles
 
 ```bash
-python tools/transcribe.py --src clips/01.mp4 --out clips/01.json
+python tools/transcribe.py --src clips/01.mp4 --out clips/01.json --words
 python tools/srt.py --transcript clips/01.json --out clips/01.srt
 ```
 
@@ -114,8 +114,28 @@ Transcribe the clip rather than slicing the source transcript — the timecodes 
 start at zero and the recogniser has already seen exactly what the viewer will hear.
 Captions are split at word boundaries to about 42 characters, which reads on a phone.
 
+`--words` also returns the start and end of every **word**. Ask for it whenever the
+captions might get burned in: without it the burner has nothing to sync to.
+
 The `.srt` drops straight into CapCut, Premiere or Resolve. Burn them in only if
 asked — a sidecar file leaves the editor free to restyle.
+
+### 7b. Burn them in, if the clip ships as-is
+
+```bash
+python tools/burn.py --src final/01_vertical.mp4 --timing clips/01.json \
+    --out final/01_captioned.mp4
+```
+
+Most of the audience watches muted, and a sidecar file nobody loads shows nothing.
+`--style karaoke` (the default) puts one line on screen and fills it word by word
+as it is spoken; `--style word` highlights and enlarges a single word at a time;
+`--style plain` renders the `.srt` unchanged and is the only style that does not
+need `--timing`.
+
+Word timings come from the recogniser, not from arithmetic. There is no estimating
+fallback on purpose — guessing word length from letter count drifts by about half a
+second, which is exactly long enough to look broken.
 
 ### 8. Vertical, if the source is landscape
 

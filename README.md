@@ -5,7 +5,7 @@ the source with timecodes, lets the agent propose hooks, cuts what the human pic
 and then transcribes every finished clip again to prove the cut is not broken. Five
 small tools, `ffmpeg`, and one HTTP call to a speech recogniser. No local model.
 
-**Status:** working, used on real recordings. Auto-reframing is not implemented.
+**Status:** working, used on real recordings.
 
 ---
 
@@ -73,6 +73,7 @@ the clip and no context, heard the words it was supposed to contain.
 | `tools/cut.py` | exact cut from the original, re-encoded so it lands on the frame, not the keyframe |
 | `tools/verify.py` | re-transcribes a clip and reports four specific failure modes |
 | `tools/srt.py` | subtitles with timecodes rebased to the clip, split at word boundaries |
+| `tools/burn.py` | captions rendered into the frame, filling word by word as they are spoken |
 | `tools/reframe.py` | landscape → vertical, following the action instead of cropping the centre |
 | `tools/mcp_server.py` | the same operations as MCP tools, so an agent calls them instead of shelling out |
 | `SKILL.md` | the sequence an agent follows, including where it must stop and ask |
@@ -115,6 +116,37 @@ through `sendcmd` driving `crop` — one keyframe per second.
 Measured on a 40-second 1280×720 stage recording: **0.7s to analyse** (119 sampled
 frames), 6.5s to render a 1080×1920 draft.
 
+## Captions that do not run ahead of the voice
+
+```bash
+python tools/transcribe.py --src clip.mp4 --out clip.json --words
+python tools/burn.py --src vertical.mp4 --timing clip.json --out captioned.mp4
+```
+
+Most of the audience watches muted, so a sidecar `.srt` nobody loads shows nothing.
+The captions are rendered into the frame, one line at a time, filling word by word
+as each word is spoken — ASS `\kf`, so the line holds still and only the colour moves.
+Pauses pass as `\k`, which holds without filling: when the speaker stops, so does the
+caption.
+
+The word boundaries come from the recogniser (`--words`), not from arithmetic. The
+first version estimated them from letter count, and it drifted by about half a second
+— close enough to look deliberate, far enough to look broken. That code is gone;
+`burn.py` refuses to guess rather than shipping an estimate that nothing downstream
+can tell apart from a measurement.
+
+Trailing full stops are dropped by default: a period at the end of a caption reads
+as a pause the speaker never made.
+
+## Three ways to fill a vertical frame
+
+`--mode crop` follows the action and cuts to 9:16 — right for a talking head.
+`--mode pad` puts the whole frame at full width on a solid background, shifted up so
+captions have somewhere to sit — right for slides, where a 9:16 crop would slice the
+diagram in half. `--mode fit` fills the margins with a blurred copy instead; it flatters
+footage that nearly fits and betrays a wide slide, where the blur takes over half the
+screen and the captions still have nothing to sit against.
+
 ## Why cutting re-encodes
 
 `ffmpeg -c copy` can only cut on keyframes, so the result drifts by up to the
@@ -152,9 +184,8 @@ python tools/srt.py    --transcript clips/01.json --out clips/01.srt
 
 ## Roadmap
 
-- **Burned-in captions** as an option, with styling.
 - **Batch mode**: propose, cut and verify a whole shortlist in one pass.
-- **`reframe` as an MCP tool** — it is a script today, not yet exposed over the protocol.
+- **`reframe` and `burn` as MCP tools** — scripts today, not yet exposed over the protocol.
 - **Face-aware reframing** as an opt-in extra, for footage where the subject is still and
   something else in frame moves.
 

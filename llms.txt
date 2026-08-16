@@ -9,6 +9,10 @@ The point of the project is the verification step: a clip is approved because th
 recogniser, given only that clip, heard the words it was cut for — not because
 someone watched it.
 
+The same rule governs the captions: word timings are measured by the recogniser, never
+estimated. The estimating version was written, shipped a visibly wrong result, and was
+deleted rather than kept as a fallback.
+
 ## Start here
 
 - [SKILL.md](SKILL.md): the sequence an agent follows, including the two points where
@@ -27,9 +31,13 @@ someone watched it.
 - [tools/verify.py](tools/verify.py): re-transcribes a clip and reports four failure
   modes — `silence_head`, `silence_tail`, `text_drift`, `empty`.
 - [tools/srt.py](tools/srt.py): subtitles with timecodes rebased to the clip.
+- [tools/burn.py](tools/burn.py): captions rendered into the frame, filling word by word
+  as they are spoken. Needs real per-word timings (`transcribe.py --words`) and refuses
+  to estimate them from letter count.
 - [tools/reframe.py](tools/reframe.py): landscape -> vertical. The camera path is built
   from motion (per-column frame differences), not face detection, so it needs no
-  dependency beyond ffmpeg. `--anchor` forces a static crop.
+  dependency beyond ffmpeg. `--anchor` forces a static crop; `--mode pad` skips cropping
+  altogether and puts the whole frame on a solid background, for slides.
 - [tools/mcp_server.py](tools/mcp_server.py): the same operations as MCP tools over
   JSON-RPC/stdio. Standard library only, no SDK.
 

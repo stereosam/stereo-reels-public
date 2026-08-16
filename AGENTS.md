@@ -16,6 +16,10 @@ Things that are not visible from the code.
   This is the reason verification exists — do not treat it as a formality.
 - **Subtitles come from transcribing the clip, not from slicing the source
   transcript.** Timecodes then start at zero, which is what every editor expects.
+- **Burned captions need real word timings — `transcribe.py --words`.** Estimating
+  word length from letter count was tried and removed: it drifts by half a second,
+  and once the estimate is in the file nothing downstream can tell it from a
+  measured timing. `burn.py` refuses rather than guesses.
 - `tools/verify.py` imports `tools/transcribe.py`. Run them from `tools/`, or add
   that directory to `PYTHONPATH`.
 - **Reframing follows motion, not faces.** On a still subject next to a moving screen it
