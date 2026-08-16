@@ -2,7 +2,10 @@
 __pycache__/
 *.pyc
 clips/
+run/
 *.mp4
+*.ass
+*.png
 *.m4a
 *.srt
 transcript*.json
