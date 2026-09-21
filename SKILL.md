@@ -191,5 +191,8 @@ Same rules apply — verify before handing anything over, draft before final.
 ## Setup
 
 Needs `ffmpeg` in PATH and a token: send `/app` to `@stereo_dictator_bot`, put it in
-`.env` as `DICTATOR_TOKEN`. Recognition runs on a GPU server — nothing heavy is
-installed locally, and no model is downloaded.
+`.env` as `DICTATOR_TOKEN`. Recognition runs in the cloud (GigaAM v3 behind the
+STEREO Dictator gateway) — nothing heavy is installed locally, and no model is downloaded.
+
+`--words` and `--diarize` do not combine: with both, word timings are replaced by a
+`words_error`. Transcribe clips for captions without `--diarize`.

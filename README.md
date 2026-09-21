@@ -19,7 +19,8 @@ claims **38 seconds for three words** — and nothing about it looks wrong in th
 transcript. Cut on that number and you get 35 seconds of silence with a punchline
 at the end. You only find out by watching, which defeats the point of automating.
 
-Real numbers from a 25-minute podcast, `large-v2` on a GPU:
+Real numbers from a 25-minute podcast (measured in August 2026 on the previous backend,
+Whisper `large-v2` on a GPU; recognition now runs on GigaAM v3 in the cloud — see Setup):
 
 | | |
 |---|---|
@@ -198,8 +199,9 @@ ffmpeg -version
 cp .env.example .env      # then paste the token into DICTATOR_TOKEN
 ```
 
-Recognition runs on a GPU server, so there is nothing to install and no model to
-download. Python 3.9+, standard library only.
+Recognition runs in the cloud — GigaAM v3, a Russian speech model, behind the STEREO
+Dictator gateway — so there is nothing to install and no model to download. An
+8-second phrase comes back in about a second. Python 3.9+, standard library only.
 
 ## Quick run
 
@@ -215,7 +217,6 @@ python tools/srt.py    --transcript clips/01.json --out clips/01.srt
 ## Roadmap
 
 - **Batch mode**: propose, cut and verify a whole shortlist in one pass.
-- **`reframe` and `burn` as MCP tools** — scripts today, not yet exposed over the protocol.
 - **Face-aware reframing** as an opt-in extra, for footage where the subject is still and
   something else in frame moves.
 
@@ -231,6 +232,10 @@ python tools/srt.py    --transcript clips/01.json --out clips/01.srt
 - **Final renders of 4K sources are slow.** 54 seconds and 46 MB for a 13-second
   clip. That is why review happens on drafts; but a shortlist of twenty finals from
   a 4K master is still a coffee break.
+- **Word timings and speakers do not come together.** `--words` works without
+  `--diarize`; with both, the response carries speakers and a `words_error` instead of
+  word timings. Transcribe the finished clip for captions without `--diarize` — a
+  clip rarely needs speaker labels anyway.
 - **One recogniser.** The pipeline talks to a single HTTP endpoint. If it is down,
   nothing runs; there is no local fallback yet.
 
